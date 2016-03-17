@@ -1,0 +1,54 @@
+#################
+#This is still in stage
+#Powershell script
+#This script is designed to search mailboxes and delete certain mailboxes that have been sent as a phising attack.
+#Michael Matthews
+#July 13th, 2015
+# 
+
+$wshell = New-Object -ComObject Wscript.Shell
+
+$wshell.Popup("Be very careful in using this script. As it could result in the result of deleting legitmate mail.
+
+Please make sure that you updated the folowing
+
+The file destination (under the employees varialbe)
+The Date sent
+The Subject
+and the Sender.
+
+Thank you
+
+",0,"Done",0x1)
+
+$curDate = Get-date -Format MM-dd-yyyy
+
+Add-PSSnapin Microsoft.exchange.management.powershell.snapin
+
+#whoever is in the netids array will be have there mail deleted
+
+################## put the file you want to import in the line below
+$employees = import-csv D:\phishingAttack.csv
+
+$netids = @()
+$netids = $employees.NetId
+
+$log = @()
+$log += "The number of emails deleted is below the netid"
+
+foreach ($netid in $netids){
+
+#in one command this will send the email information to the targetmailbox and will delete it from the endusers mailbox
+#########change the Subject, from and sent in order to have accurate results!
+
+
+   $getMail = get-mailbox -Identity $netid | 
+   search-mailbox -TargetMailbox postmaster -targetfolder "searchndelete" -SearchQuery {Subject: "Important Notification" AND From: "postmaster@byu.edu" AND Sent: "10/19/2015" } -LogLevel Full -DeleteContent -force
+
+     
+   $log += $netid, $getMail.ResultItemsCount
+     
+   $log >> C:\Deletlog\bboard20150831\logs-$curDate.txt
+          
+      
+}

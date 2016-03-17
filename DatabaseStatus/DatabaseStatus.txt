@@ -1,0 +1,99 @@
+
+############
+#
+# DatabaseStatus.ps1
+# Name: Michael Matthews
+# Date: July 10th, 2015
+#
+# This script was created in order to determine whether or not the mailboxdatabase are in a healthy state
+# At one point we had an issue when one of the mailboxdatabase's was failedandsuspended which caused some issues with those
+# mailboxes on that database. 
+#
+# This script runs the get-mailboxdatabasecopystatus command to verify that they are all in working condition.  That report then 
+# goes to mailboxstatus.byu.edu where nagios verifies that there are no "failures".  ("false" doesn't have any meaning). 
+#
+##########
+
+$curDate = get-date -Format yyyy-MM-dd
+
+Add-PSSnapin Microsoft.exchange.management.powershell.snapin
+
+#This part of the script gets the first 30 mailboxes.  The first 30 are the only ones we actually want to track 13DB1-13DB30.  
+$databases = get-mailboxdatabase
+$DB = @()
+ for ($i = 0; $i -lt 30; $i++){
+    
+    $DB += get-mailboxdatabase $databases[$i]
+   }
+  
+#This part of the script simply gets the correct property of the databases (the actual name of the database)
+
+$names = @()
+ForEach ($name in $DB){
+    $names += $name.Name
+}
+
+
+#This part of the script does the actual logging of the information. It logs the name, status, and ContentIndexState of the Databases everyday 
+$formatedlist = @()
+for ($i=0; $i -lt 30; $i ++){
+        $formatedlist += Get-MailboxDatabaseCopyStatus -Identity $names[$i]
+}
+
+
+#This logging is for Nagios to grab.  In needs to be in this format
+$formatedlist | export-csv D:\Reports\DatabaseStatus\DatabaseStatus3.htm 
+
+#This logging is for the script to use. It can't be appended because the scrit calls it back later
+$formatedlist > D:\Reports\DatabaseStatus\DatabaseStatus.txt
+
+$getitem = import-csv D:\Reports\DatabaseStatus\DatabaseStatus.txt
+
+#This is the format of the mail that is sent out in case of an unhealthy database
+
+$From = "office365admin@byu.edu"
+$To = "office365admin@byu.edu"
+$Subject = "UnHealthy Database Servers"
+$Body = "The script that verifies the status of databases 13DB1-13DB30 has shown that not all are 'healthly'.
+ Please reference the following list that is attached. 
+
+This script runs on CA6 on Task Manager. Please see the following link:
+
+http://mailboxstatus.byu.edu/DatabaseStatus3.htm 
+
+Office of IT"
+$SMTPServer = "gateway.byu.edu"
+$SMTPPort = "25"
+
+#This for loop verfies if the mailbox is healthy or not.  If it is healthy there are no worries.  If it isn't, it sends out
+#an email to office365admin@byu.edu notifiying of the change. 
+
+$notHealthy =@()
+for ($i=0; $i -lt 30; $i ++){
+
+Get-MailboxDatabaseCopyStatus $names[$i] | Foreach-object {
+
+if ($_.ContentIndexState -eq "Healthy"){
+
+    Write-host "Database $($names[$i]) is healthy"
+}
+
+else {
+        $notHealthy += $names[$i]
+        Send-MailMessage -Attachments "D:\Reports\DatabaseStatus\DatabaseStatus.txt" -From $From -to $To -Subject $Subject -Body $Body -SmtpServer $SMTPServer -port $SMTPPort -UseSsl  
+      }
+   }
+  
+}
+
+if ($notHealthy -ge 0){
+
+write-output "$($curDate) ERROR: WARNING: The script ran and not all mailboxes are healthy.The following mailboxes are not healthy: $($notHealthy)" >>D:\Reports\DatabaseStatus\logs.txt  
+
+}
+
+else{
+
+write-output "$($curDate) The script ran and all mailboxes are healthy." >> D:\Reports\DatabaseStatus\logs.txt  
+
+}
