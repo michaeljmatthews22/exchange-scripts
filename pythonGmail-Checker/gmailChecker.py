@@ -23,30 +23,29 @@ are all logged. Else, the time sent (since we don't have a receive time) is logg
 
 #this should be 600 seconds for a ten minute run
 #the script will send the email and then wait to check for the number of seconds below
-wait = 600
+wait = 10
 
 
 #importing necessary libraries
-import smtplib
-import imaplib
-import email
-import time
+import smtplib, imaplib, email, time, re, json
 from datetime import datetime
-import re
+file_path = open('config.py', 'r')
+json_file = file_path.read()
+json_data = json.loads(json_file)
 
 
 #setting start time
 start = time.time()
 
 #Sending the message
-fromaddr = 'exchangetestbyu2@gmail.com'
+fromaddr = json_data["credentials"][0]["username2"]
 toaddr = 'postmaster@byu.edu'
 msg = 'Subject: %s\n\n%s' % (start, 'This email is sent in order to verify if BYU mail flow is working correctly')
 
 
 #Credentials
-username = 'exchangetestbyu2@gmail.com'
-password = 'pQqCEJpUVFmArBaWLAcPno6aGUgvermAhb4UYNDFkdWJxowryn'
+username = json_data["credentials"][0]["username2"]
+password = json_data["credentials"][0]["password"]
 
 #The actual mail send
 server = smtplib.SMTP('smtp.gmail.com:587')
@@ -67,7 +66,7 @@ def extract_body(payload):
         return '\n'.join([extract_body(part.get_payload()) for part in payload])
 
 conn = imaplib.IMAP4_SSL("imap.gmail.com", 993)
-conn.login("exchangetestbyu@gmail.com", "pQqCEJpUVFmArBaWLAcPno6aGUgvermAhb4UYNDFkdWJxowryn")
+conn.login(json_data["credentials"][0]["username"], json_data["credentials"][0]["password"])
 conn.select()
 typ, data = conn.search(None, 'UNSEEN')
 subject = "1232112312"
@@ -157,15 +156,15 @@ while counter == 0:
                 print(sent_time.strftime("%H:%M:%S %m-%d"), "!", file = log)
 
             #This is the email that the error message will be sent to
-            toaddrError = 'zspecialk@gmail.com'
+            toaddrError = json_data["results"][0]["send_to"]
             msgError = 'Subject: %s\n\n%s' % (start, 'There was an error in sending the script')
 
             #Sending the message
-            fromaddr = 'exchangetestbyu2@gmail.com'
+            fromaddr = json_data["credentials"][0]["username2"]
 
             #Credentials
-            username = 'exchangetestbyu2@gmail.com'
-            password = 'pQqCEJpUVFmArBaWLAcPno6aGUgvermAhb4UYNDFkdWJxowryn'
+            username = json_data["credentials"][0]["username2"]
+            password = json_data["credentials"][0]["password"]
 
             #The actual mail send
             server = smtplib.SMTP('smtp.gmail.com:587')
