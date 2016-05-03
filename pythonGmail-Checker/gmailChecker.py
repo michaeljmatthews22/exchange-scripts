@@ -12,8 +12,8 @@ Date: Oct. 7th 2015
 
 This script is designed to log into a gmail account and send an email
 to a @byu.edu address. The @byu.edu address is set up to automatically bounce the message
-to a seperate gmail account. The script then logs into the second gmail account 
-and verifies that the same email that was sent arrived. 
+to a seperate gmail account. The script then logs into the second gmail account
+and verifies that the same email that was sent arrived.
 
 If the same email that was sent arrives, the the time sent, time receieved and the IP address
 are all logged. Else, the time sent (since we don't have a receive time) is logged in the errors.txt file
@@ -23,68 +23,38 @@ are all logged. Else, the time sent (since we don't have a receive time) is logg
 
 #this should be 600 seconds for a ten minute run
 #the script will send the email and then wait to check for the number of seconds below
-wait = 100
+wait = 600
 
 
 #importing necessary libraries
+import smtplib
 import imaplib
-
 import email
 import time
 from datetime import datetime
+import re
 
 
 #setting start time
 start = time.time()
-"""
+
 #Sending the message
 fromaddr = 'exchangetestbyu2@gmail.com'
 toaddr = 'postmaster@byu.edu'
-msg = 'Subject: %s\n\n%s' % (start, 'Mercury This email is sent in order to verify if BYU mail flow is working correctly')
+msg = 'Subject: %s\n\n%s' % (start, 'This email is sent in order to verify if BYU mail flow is working correctly')
 
 
 #Credentials
 username = 'exchangetestbyu2@gmail.com'
 password = 'pQqCEJpUVFmArBaWLAcPno6aGUgvermAhb4UYNDFkdWJxowryn'
 
-import socks
-#setting up proxy
-socks.setdefaultproxy(socks.PROXY_TYPE_SOCKS5, 'east.byu.edu', 3128)
-socks.wrapmodule(smtplib)
-
 #The actual mail send
-smtpserver = 'smtp.gmail.com'
-server = smtplib.SMTP(smtpserver,587)
+server = smtplib.SMTP('smtp.gmail.com:587')
 server.starttls()
 server.login(username, password)
 sent_time = datetime.now()
 server.sendmail(fromaddr, toaddr, msg)
 server.quit()
-
-"""
-
-
-import smtplib
-
-sender = "michaeljmatthews@byu.edu"
-receivers = "michaeljmatthews22@gmail.com"
-
-message = """From: From Person <michaeljmatthews@byu.edu>
-To: To Person <michaeljmatthews22@gmail.com>
-MIME-Version: 1.0
-Content-type: text/html
-Subject: SMTP HTML e-mail test
-
-This is an e-mail message to be sent in HTML format
-
-<b>This is HTML message.</b>
-<h1>This is headline.</h1>
-"""
-
-
-smtpObj = smtplib.SMTP('localhost')
-smtpObj.sendmail(sender, receivers, message)
-print("This worked")
 
 #Having the script wait so that the email can get there
 time.sleep(wait)
@@ -113,15 +83,11 @@ try:
             if isinstance(response_part, tuple):
                 msg = email.message_from_string(response_part[1])
 
-                import re
-
                 subject = msg['subject']
                 received = msg['Received']
                 received_ip = received[0:16]
+                match_time = re.findall(r'[a-zA-Z]{3}\W\s\d*\s[a-zA-Z]{3}\s\d{4}\s\d{2}\W\d{2}\W\d{2}', received)
 
-                #print(received)
-                match_time = re.findall(r'[a-zA-Z]{3}\W\s\d\d\s[a-zA-Z]{3}\s\d{4}\s\d{2}\W\d{2}\W\d{2}', received)
-                print(match_time[0])
                 #for some reason I needed to import this libraries further along the script because I was importing
                 #datetime differently for different reasons
 
@@ -132,11 +98,10 @@ try:
 
                 local = pytz.timezone ("America/Los_Angeles")
 
-                
                 #match_time is a list, so you need to find the first element of that list
                	naive = datetime.datetime.strptime (match_time[0], "%a, %d %b %Y %H:%M:%S")
-                
-                #The subject on the message will have "FW: " at the beginning plus the start time. 
+
+                #The subject on the message will have "FW: " at the beginning plus the start time.
                 #This is used to define if it is the same email that was sent. Keep in mind that the sent
                 #time is the subject and so therefore is unique
 
@@ -159,7 +124,7 @@ finally:
 counter = 0
 errorCounter = 0
 while counter == 0:
-    
+
         parseSubject = subject[4:]
         subjectFloat = int(float(parseSubject))
         done = time.time()
@@ -167,20 +132,19 @@ while counter == 0:
 
         #This conditional statement is if the subject of the returned email matches the one that was sent
         if subject == subject_ID:
-            
+
             new = naive + timedelta(hours=1)
-            
-            print("we got here!")
-            log = open("/var/www/html/results.txt", "a")
+
+            log = open("results.txt", "a")
             print(received_ip, "!", file = log)
             print(sent_time.strftime("%H:%M:%S %m-%d"), "!", file = log)
             print(new.strftime("%H:%M:%S %m-%d"), "!", file = log)
-            
-            #counter 
-            counter = 1    
-        
+
+            #counter
+            counter = 1
+
         else:
-        
+
             errorCounter = errorCounter + 1
 
             if errorCounter > 2:
@@ -189,11 +153,11 @@ while counter == 0:
 
             if errorCounter == 1:
 
-                log = open("/var/www/html/errors.txt", "a")
+                log = open("errors.txt", "a")
                 print(sent_time.strftime("%H:%M:%S %m-%d"), "!", file = log)
-            
+
             #This is the email that the error message will be sent to
-            toaddrError = 'michaeljmatthews22@gmail.com'
+            toaddrError = 'zspecialk@gmail.com'
             msgError = 'Subject: %s\n\n%s' % (start, 'There was an error in sending the script')
 
             #Sending the message
@@ -210,11 +174,3 @@ while counter == 0:
             server.login(username, password)
             server.sendmail(fromaddr, toaddrError, msgError)
             server.quit()
-
-
-
-
-
-
-
-
