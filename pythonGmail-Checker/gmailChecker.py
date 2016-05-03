@@ -23,7 +23,7 @@ are all logged. Else, the time sent (since we don't have a receive time) is logg
 
 #this should be 600 seconds for a ten minute run
 #the script will send the email and then wait to check for the number of seconds below
-wait = 10
+wait = 600
 
 
 #importing necessary libraries
